@@ -29,7 +29,7 @@ except:
 
 if args.pin is None:
     checkpin = data['checkpin']
-    for i in [str(i).encode() for i in range(1000000)]:
+    for i in [str(i).rjust(6, '0').encode() for i in range(1000000)]:
         if hashlib.sha256(i).digest() == checkpin:
             client_pin = i
             break
